@@ -23,15 +23,15 @@ using namespace ${TARGET_NAME};
 
 
 /*static*/ unsigned char VersionInfo::majorv() noexcept {
-    return ${PROJECT_VERSION_MAJOR};
+    return '${PROJECT_VERSION_MAJOR}';
 }
 
 /*static*/ unsigned char VersionInfo::minorv() noexcept {
-    return ${PROJECT_VERSION_MINOR};
+    return '${PROJECT_VERSION_MINOR}';
 }
 
 /*static*/ unsigned char VersionInfo::buildv() noexcept {
-    return ${PROJECT_VERSION_PATCH};
+    return '${PROJECT_VERSION_PATCH}';
 }
 
 /*static*/ std::string VersionInfo::suffixv() noexcept {

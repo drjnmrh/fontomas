@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 macro(AG_Platform_Init)
-    include(BundleUtilities)
 endmacro()
 
 
@@ -39,6 +38,11 @@ macro(AG_Platform_SetupTargetFlags target)
         $<$<COMPILE_LANGUAGE:CXX>:-std=c++1z>
         $<$<COMPILE_LANGUAGE:C>:-std=c99>
     )
+
+    target_compile_options(${target} PUBLIC
+        $<$<CONFIG:Debug>:-rdynamic>
+    )
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -rdynamic")
 
     target_compile_options(${target} PUBLIC
         $<$<CONFIG:Release>:-Ofast $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti> >
