@@ -164,12 +164,12 @@ macro(autogen_add_test target testname sourcespath datapath)
     file(GLOB_RECURSE _allitems "${CMAKE_CURRENT_SOURCE_DIR}/${sourcespath}/*.*")
     set(_items "")
     foreach(item ${_allitems})
-        if (${item} MATCHES "^(.+[.]((c)|(cpp)|([m]+)))$")
+        if (${item} MATCHES "^(.+[.]((c)|(cpp)|([m]+)|(h)))$")
             list(APPEND _items ${item})
         endif()
     endforeach()
 
-    AG_FilterPlatformSources(_items "(c)|(cpp)|([m]+)")
+    AG_FilterPlatformSources(_items "(c)|(cpp)|([m]+)|(h)")
 
     if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
         source_group("[sources]" FILES ${_items})
@@ -178,7 +178,12 @@ macro(autogen_add_test target testname sourcespath datapath)
     endif()
 
     AG_AddTargetTest(${target} ${testname} _items)
-    AG_AttachTestData(${testname} ${datapath})
+
+    target_include_directories(${testname} PRIVATE ${sourcespath})
+
+    if (EXISTS ${datapath})
+        AG_AttachTestData(${testname} ${datapath})
+    endif()
 endmacro()
 
 
