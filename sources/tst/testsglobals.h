@@ -3,7 +3,9 @@
 #define FONTOMAS_TST_TESTSGLOBALS_H_
 
 
+#include <cassert>
 #include <list>
+#include <vector>
 #include <sstream>
 #include <type_traits>
 #include <unordered_map>
@@ -122,6 +124,54 @@ bool check_notnull(const Container& c, Key k) {
 }
 
 
+void shuffle(std::vector<std::size_t>& buffer) noexcept;
+
+
+template <typename T>
+std::size_t count_all(const T* buffer, std::size_t sz, T value) {
+    std::size_t counter = 0;
+    for (std::size_t i = 0; i < sz; ++i) {
+        if (value == buffer[i])
+            ++counter;
+    }
+    return counter;
+}
+
+template <typename OutType, typename InType, class Predicate>
+std::list<OutType> collect_all(const InType* buffer, OutType sz, InType value, Predicate filter) {
+    std::list<OutType> result;
+    for (OutType i = 0; i < sz; ++i) {
+        if (filter(i) && buffer[i] == value)
+            result.push_back(i);
+    }
+    return result;
+}
+
+template <typename T>
+bool equal_unordered(const T* buffer, const std::list<T>& l) {
+    std::unordered_map<T, std::size_t> table;
+
+    for (const auto& e : l) {
+        auto foundIt = table.find(e);
+        if (foundIt == table.end()) {
+            auto res = table.insert(std::make_pair(e, 0));
+            assert(res.second);
+            foundIt = res.first;
+        }
+
+        foundIt->second += 1;
+    }
+
+    for (const auto& p : table) {
+        std::size_t nb = count_all(buffer, l.size(), p.first);
+        if (p.second != nb)
+            return false;
+    }
+
+    return true;
+}
+
+
 
 }
 }
@@ -185,6 +235,20 @@ void add_suit_ ## SuitName (std::list< fontomas::testing::Test >& allTests) {   
 #define fontomas__check_notnull(Container, Key)                                 \
     if ( !fontomas::testing::check_notnull(Container, Key) ) {                  \
         LOG.format("check_notnull failed in %s at %d (%d)\n",                   \
+                   __FILE__, __LINE__, __COUNTER__);                            \
+        return false;                                                           \
+    }
+
+#define fontomas__check_true(Expr)                                              \
+    if ( !(Expr) ) {                                                            \
+        LOG.format("check_true failed in %s at %d (%d)\n",                      \
+                   __FILE__, __LINE__, __COUNTER__);                            \
+        return false;                                                           \
+    }
+
+#define fontomas__check_false(Expr)                                             \
+    if ( !!(Expr) ) {                                                           \
+        LOG.format("check_false failed in %s at %d (%d)\n",                     \
                    __FILE__, __LINE__, __COUNTER__);                            \
         return false;                                                           \
     }

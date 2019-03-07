@@ -36,7 +36,7 @@
 #endif
 
 
-#define fontomas__safe_call(Call) fontomas__try { Call; } fontomas__catchall { fontomas__hardbreak; }
+#define fontomas__safe_call(Call) { fontomas__try { Call; } fontomas__catchall { fontomas__hardbreak; } }
 
 
 #endif//FONTOMAS_MACROS_H_
