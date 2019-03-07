@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <vector>
 
@@ -11,9 +13,12 @@ using namespace fontomas::testing;
 
 
 int main(int argc, char** argv) {
+    std::srand(unsigned(std::time(0)));
+
     std::list<Test> allTests;
     fontomas__enable_suit(DI, allTests);
-    
+    fontomas__enable_suit(FallbackGraph, allTests);
+
     LOG << "----------------------------------------\n";
     LOG << "fontomas v" << fontomas::VersionInfo::toString() << " tester\n";
     LOG << "----------------------------------------\n";

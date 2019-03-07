@@ -1,8 +1,123 @@
 #!/bin/bash
 
-OLDWD=${PWD}
+MYDIR="$(cd "$(dirname "$0")" && pwd)"
+PLATFORM="osx"
+VERBOSE=0
+DEVELOP=0
+BUILDNUMBER="1"
+DONTS=""
 
-_mydir="$(cd "$(dirname "$0")" && pwd)"
-cd $_mydir
+###############################################################
+# Displays help information for the script
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns:
+#   None
+###############################################################
+help() {
+	echo "Usage"
+	echo ""
+	echo "  ./mk <platform> [options]"
+	echo ""
+    echo "Specify the target platform (osx, android, ios)."
+	echo ""
+	echo "Options:"
+	echo "  -v, --verbose                   = enable verbose mode"
+    echo "  --develop                       = enable development mode"
+	echo "  -h, --help                      = show this help"
+    echo "  --buildno <build number>        = specify a build number"
+    echo "  --dont <phase name>             = exclude phase (generate, build, test)"
+	echo ""
+	echo "Examples:"
+	echo ""
+	echo "  ./mk osx --buildno 256"
+	echo ""
 
-cd ${OLDWD}
+	exit 0
+}
+
+#######################################################################
+# Parses arguments and sets global variables according values of these
+# arguments.
+# Globals:
+#   PLATFORM, VERBOSE, BUILDNUMBER
+# Arguments:
+#   arguments to the script to parse
+# Returns:
+#   None
+#######################################################################
+parse_args() {
+	if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+		help
+	fi
+
+	PLATFORM="$1"
+    if [[ ! "${PLATFORM}" ]]; then
+        echo "platform is required (see --help for more information)" >&2
+		exit 1
+    fi
+
+    shift
+
+	while [[ "$#" > 0 ]]; do case $1 in
+	-v|--verbose) VERBOSE=1;;
+    --develop) DEVELOP=1;;
+    --dont) DONTS="$DONTS --dont $2"; shift;;
+	-h|--help) help;;
+    --buildno) BUILDNUMBER=$2; shift;;
+	*) echo "Unknown parameter passed: $1" >&2; exit 1;;
+	esac; shift; done
+
+	if [[ $VERBOSE -eq 1 ]]; then
+		echo "VERBOSE mode is ON"
+	fi
+
+    if [[ $DEVELOP -eq 1 ]]; then
+		echo "DEVELOPMENT mode is ON"
+	fi
+}
+
+
+#######################################################################
+# The main function of the script. Executes the corresponding AutoGen
+# mk script for the specified platform.
+# Globals:
+#   PLATFORM, VERBOSE, BUILDNUMBER
+# Arguments:
+#   arguments to the script to parse
+# Returns:
+#   None
+#######################################################################
+main() {
+    local _oldDir=${PWD}
+
+	parse_args $@
+
+    cd ${MYDIR}
+
+	local _verboseflag=""
+	if [[ $VERBOSE -eq 1 ]]; then
+		_verboseflag="--verbose"
+	fi
+
+    local _developflag=""
+	if [[ $DEVELOP -eq 1 ]]; then
+		_developflag="--develop"
+	fi
+
+	./tools/bash/autogen-${PLATFORM}-mk.sh --root ${MYDIR} --buildno ${BUILDNUMBER} $_verboseflag $_developflag ${DONTS}
+
+    cd $_oldDir
+    exit 0
+}
+
+
+# ---------------------------------------------------------------------------
+
+
+main $@
+
+
+# mk

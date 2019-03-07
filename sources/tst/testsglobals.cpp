@@ -2,6 +2,9 @@
 
 #include <stdarg.h>
 
+#include <algorithm>
+#include <cstdlib>
+
 
 namespace fontomas::testing { ;
 namespace platform { ;
@@ -10,6 +13,14 @@ extern void append_log_message(const std::string& msg) noexcept;
 extern bool run_in_sandbox(Sandbox::Func func) noexcept;
 
 }
+}
+
+
+void fontomas::testing::shuffle(std::vector<std::size_t>& buffer) noexcept {
+    for (std::size_t i = buffer.size() - 1; i >= 1; --i) {
+        std::size_t j = std::rand() % i;
+        std::swap(buffer[i], buffer[j]);
+    }
 }
 
 

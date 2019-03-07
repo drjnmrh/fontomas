@@ -65,15 +65,7 @@ help() {
 #   None
 #######################################################################
 parse_args() {
-	if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
-		help
-	fi
-	if [[ "$2" == "--help" ]] || [[ "$2" == "-h" ]]; then
-		help
-	fi
-	if [[ "$3" == "--help" ]] || [[ "$3" == "-h" ]]; then
-		help
-	fi
+	local _defaultTools=1
 
 	while [[ "$#" > 0 ]]; do case $1 in
 	-d|--develop) DEVELOP=1;;
@@ -81,7 +73,7 @@ parse_args() {
 	-h|--help) help;;
 	-r|--root) ROOT=$2; shift;;
     --config) CONFIG=$2; shift;;
-	--tools) TOOLS=$2; shift;;
+	--tools) TOOLS=$2; _defaultTools=0; shift;;
 	*) echo "Unknown parameter passed: $1" >&2; exit 1;;
 	esac; shift; done
 
@@ -96,14 +88,18 @@ parse_args() {
 	ROOT="$(cd "$(dirname "$ROOT")"; pwd)/$(basename "$ROOT")"
 
 	if [[ $DEVELOP -eq 1 ]]; then
-		echo "DEVELOP mode ON"
+		echo "DEVELOP mode is ON"
 	fi
 
 	if [[ $VERBOSE -eq 1 ]]; then
-		echo "VERBOSE mode ON"
+		echo "VERBOSE mode is ON"
 	fi
 
 	PREFIX=${ROOT}/boutput
+
+	if [[ $_defaultTools -eq 1 ]]; then
+		TOOLS=${ROOT}/tools
+	fi
 }
 
 
