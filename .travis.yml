@@ -12,7 +12,8 @@ branches:
   only:
     - master
     - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+    - develop
 
 install: true
 script:
-  - ./mk $PLATFORM
+  - 'if [ "$TRAVIS_BRANCH" == "develop" ]; then ./mk $PLATFORM --develop; else ./mk $PLATFORM; fi'
