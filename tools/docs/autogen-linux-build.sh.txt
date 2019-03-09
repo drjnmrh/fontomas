@@ -1,0 +1,22 @@
+Builds a module using CMake generated project.
+Assumes, that the main CMakeLists.txt file is in the so called ROOT folder
+(a root folder of the project), and that the CMake generation has been executed
+in a specific subfolder.
+
+Usage:
+
+  autogen-linux-build.sh config [options]
+
+Specify which config (debug, release) should be generated.
+
+Options:
+  -d, --develop                   = all modules are installed in the parent folder
+  -v, --verbose                   = enable verbose mode
+  -h, --help                      = show this help
+  -r, --root <path/to/root>       = specify a path to the folder, which contains modules
+  --tools <path/to/tools>         = specify a path to the AutoGen tools folder
+  -j, --jobs <number of jobs>     = specify a number of jobs used for the build
+
+Examples:
+
+  ./autogen-linux-build.sh debug --develop --root ../..
