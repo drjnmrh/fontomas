@@ -1,0 +1,19 @@
+language: cpp
+
+os: osx
+
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode10.1
+      env: PLATFORM=osx
+
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+    - develop
+
+install: true
+script:
+  - 'if [ "$TRAVIS_BRANCH" == "develop" ]; then ./mk $PLATFORM --develop; else ./mk $PLATFORM; fi'
