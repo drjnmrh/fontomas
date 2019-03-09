@@ -22,9 +22,10 @@ class fontomas_public Graph final {
 public:
     enum Result { eOk = 0, eExists, eNotExists, eNotAllowed, eFailed };
 
+    Graph() noexcept;
     ~Graph() noexcept;
 
-    bool empty() const noexcept;
+    bool empty() const noexcept { return 0 == _szNodes; }
 
     Result addNode(nodeid_t nodeId, tagid_t tagId) noexcept;
     Result addRoute(nodeid_t nodeId, nodeid_t fallbackId, tagid_t tagId) noexcept;
@@ -51,13 +52,25 @@ private:
     bool has_backedge(nodeid_t nodeId, tagid_t tagId,
                       Color* colors, const TagRoutes& route) const noexcept;
 
-    static void release(NodeInfo& info) noexcept;
     static bool has_route(const NodeInfo& info, nodeid_t fallbackId, tagid_t tagId) noexcept;
-    static bool attach_route(NodeInfo& info, nodeid_t fallbackId, tagid_t tagId) noexcept;
-    static bool attach_tag(NodeInfo& info, tagid_t tagId) noexcept;
-    static void detach_tag(NodeInfo& info, tagid_t tagId) noexcept;
+    
+    inline void allocNodes(nodeid_t maxNodeId) noexcept;
+    
+    static inline bool exists(const NodeInfo& info) noexcept;
+    static inline bool attached(const NodeInfo& info, tagid_t tagId) noexcept;
+    static inline bool detached(const NodeInfo& info, tagid_t tagId) noexcept;
+    static inline void attach(NodeInfo& info, tagid_t tagId) noexcept;
+    static inline void detach(NodeInfo& info, tagid_t tagId) noexcept;
+    static inline void connect(NodeInfo& info, nodeid_t fallbackId, tagid_t tagId) noexcept;
+    static inline void release(NodeInfo& info) noexcept;
 
-    std::unordered_map<nodeid_t, NodeInfo> _nodesTable;
+    // an array of info for each node; index is a node id, thus it is better to
+    // keep set of node ids dense; the node exists if its info contains at least
+    // one tag
+    NodeInfo* _nodes;
+    // number of allocated elements in the nodes array
+    nodeid_t _szNodes;
+    // max node id, which is registered in the graph
     nodeid_t _maxNodeId;
 };
 
