@@ -1,49 +1,27 @@
 #!/bin/bash
 
-DEVELOP=0
-VERBOSE=0
-ROOT=${PWD}
+# AutoGen Bash Linux Makefiles generation script.
+# Copyright (C) 2019  O.Z.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# ----------------------- AutoGen Scripts Commons -----------------------------
+
+
 TOOLS=${PWD}/tools
-PREFIX=${PWD}/boutput
-CONFIG="release"
-DIR_SUFFIX=linux
-MAJOR="0"
-MINOR="0"
-PATCH="1"
-
-###############################################################
-# Displays help information for the script
-# Globals:
-#   None
-# Arguments:
-#   None
-# Returns:
-#   None
-###############################################################
-help() {
-	echo "Usage"
-	echo ""
-	echo "  ./autogen-linux-gen.sh <config> [options]"
-	echo ""
-    echo "Specify which config (debug, release) should be generated."
-	echo ""
-	echo "Options:"
-	echo "  -d, --develop                   = all modules are installed in the parent folder"
-	echo "  -v, --verbose                   = enable verbose mode"
-	echo "  -h, --help                      = show this help"
-	echo "  -r, --root <path/to/root>       = specify a path to the folder, which contains modules"
-    echo "  --tools <path/to/tools>         = specify a path to the AutoGen tools folder"
-	echo ""
-	echo "Examples:"
-	echo ""
-	echo "  ./autogen-linux-gen.sh debug --develop --root .."
-	echo ""
-
-	exit 0
-}
-
 ################################################################
-# Checks Ug CMake & Bash utils and includes sources.
+# Checks AutoGen CMake & Bash utils and includes sources.
 # Globals:
 #   TOOLS, PWD
 # Arguments:
@@ -74,65 +52,59 @@ include_utils() {
 	return 0
 }
 
-################################################################
-# Parses Git Tag of the current module in order to get version.
-# Uses Ug CMake & Bash Utils.
-# Sets MAJOR, MINOR and PATCH global variables.
+
+# ----------------------------------------------------------------------------
+
+
+
+DEVELOP=0
+VERBOSE=0
+ROOT=${PWD}
+PREFIX=${PWD}/boutput
+CONFIG="release"
+DIR_SUFFIX=linux
+MAJOR="0"
+MINOR="0"
+PATCH="1"
+
+###############################################################
+# Displays help information for the script
 # Globals:
-#   MAJOR, MINOR, PATCH
+#   None
 # Arguments:
 #   None
 # Returns:
-#   0 if succeeded, 1 otherwise
-################################################################
-parse_version() {
-	ag::info "parsing version from Git tag "
+#   None
+###############################################################
+help() {
+	echo "Usage"
+	echo ""
+	echo "  autogen-linux-gen.sh <config> [options]"
+	echo ""
+    echo "Specify which config (debug, release) should be generated."
+	echo ""
+	echo "Options:"
+	echo "  -d, --develop                   = all modules are installed in the parent folder"
+	echo "  -v, --verbose                   = enable verbose mode"
+	echo "  -h, --help                      = show this help"
+	echo "  -r, --root <path/to/root>       = specify a path to the folder, which contains modules"
+    echo "  --tools <path/to/tools>         = specify a path to the AutoGen tools folder"
+	echo ""
+	echo "Examples:"
+	echo ""
+	echo "  ./autogen-linux-gen.sh debug --develop --root ../.."
+	echo ""
 
-	local gittag=$(git describe --tags)
-	if [[ $? -ne 0 ]]; then
-		ag::err "failed to get current Git tag"
-		ag::fail "FAILED\n"
-		return 1
-	fi
-
-	ag::info "$gittag: "
-
-	local major=$(ag::parse_major_number $gittag)
-	if [[ -z "$major" ]]; then
-		ag::err "failed to parse major version number from $gittag"
-		ag::fail "FAILED\n"
-		return 1
-	fi
-
-	local minor=$(ag::parse_minor_number $gittag)
-	if [[ -z "$minor" ]]; then
-		ag::err "failed to parse minor version number from $gittag"
-		ag::fail "FAILED\n"
-		return 1
-	fi
-
-	local patch=$(ag::parse_patch_number $gittag)
-	if [[ -z "$patch" ]]; then
-		ag::err "failed to parse patch version number from $gittag"
-		ag::fail "FAILED\n"
-		return 1
-	fi
-	printf "v$major.$minor.$patch "
-	ag::done "DONE\n"
-
-	MAJOR=$major
-	MINOR=$minor
-	PATCH=$patch
-	return 0
+	exit 0
 }
 
 #######################################################################
 # Parses arguments and sets global variables according values of these
 # arguments.
 # Globals:
-#   MODULE, PHASE, PLATFORM, DEVELOP, VERBOSE, PREFIX, SERIAL
+#   CONFIG, DEVELOP, VERBOSE, ROOT, TOOLS, PREFIX
 # Arguments:
-#   phase, platform, options
+#   config
 # Returns:
 #   None
 #######################################################################
@@ -186,16 +158,43 @@ parse_args() {
 }
 
 
+#######################################################################
+# Main function of the script. Uses CMake to generate UNIX Makefiles.
+# Globals:
+#   PWD, CONFIG, VERBOSE, DEVELOP, ROOT, PREFIX, TOOLS, MAJOR, MINOR, PATCH
+# Arguments:
+#   arguments to the script to parse
+# Returns:
+#   None
+#######################################################################
 main() {
     local _cmaketool=cmake
-    local _builddir=build.${DIR_SUFFIX}
     local _olddir=${PWD}
+
+	parse_args $@
+	include_utils linux
+
+	cd ${ROOT}
+	if [[ $? -ne 0 ]]; then
+		ag::err "failed to CD to the root folder ${ROOT}!\n"
+		ag::fail "FAILED\n"
+		exit 1
+	fi
+
+	ag::parse_version
+	if [[ $? -ne 0 ]]; then
+		ag::err "failed to get version of the module"
+		ag::fail "FAILED\n"
+		cd ${OLDWD}
+		exit 1
+	fi
+
+	local _builddir=$(ag::get_build_folder_name ${CONFIG})
 
     if [[ -d "$_builddir" ]]; then
 		printf "  - cleaning by removing $_builddir : ";
 		rm -rf $_builddir
 		if [[ $? -ne 0 ]]; then
-			ag::err "failed to remove $_builddir"
 			ag::warn "FAILED\n"
 		else
 			ag::done "DONE\n"
@@ -219,15 +218,30 @@ main() {
 	fi
 	ag::done "DONE\n"
 
+	local _prefixdir=$(ag::get_prefix_path ${PREFIX} ${CONFIG})
+	local _buildtype=""
+
+	case ${CONFIG} in
+		Release|release)
+			_buildtype="-DCMAKE_BUILD_TYPE=Release";;
+		Debug|debug)
+			_buildtype="-DCMAKE_BUILD_TYPE=Debug";;
+		All|all)
+			_buildtype="";;
+		*)
+			return;;
+	esac
+
     $_cmaketool .. \
-            -DCMAKE_INSTALL_PREFIX=$PREFIX/$DIR_SUFFIX \
+            -DCMAKE_INSTALL_PREFIX=$_prefixdir \
+			$_buildtype \
             -G "Unix Makefiles" \
             -DVERMAJOR=${MAJOR} -DVERMINOR=${MINOR} -DVERPATCH=${PATCH} \
 			-DTOOLSDIR=$TOOLS -DVERBOSE=$VERBOSE
 
     if [[ $? -ne 0 ]]; then
         cd $_olddir
-        ag::err "failed to generate Xcode project"
+        ag::err "failed to generate makefiles"
         ag::fail "FAILED\n"
         exit 1
     fi
@@ -238,31 +252,10 @@ main() {
 }
 
 
-parse_args $@
-include_utils linux
+# ----------------------------------------------------------------------------
 
-OLDWD=${PWD}
-cd ${ROOT}
-if [[ $? -ne 0 ]]; then
-	echo "expected folder ${ROOT}" >&2
-	exit 1
-fi
-
-parse_version
-if [[ $? -ne 0 ]]; then
-    if [[ $DEVELOP -eq 1 ]]; then
-        MAJOR="0"
-        MINOR="0"
-        PATCH="1"
-    else
-        ag::err "failed to get version of the module"
-        ag::fail "EPIC FAIL\n"
-        cd ${OLDWD}
-        exit 1
-    fi
-fi
 
 main $@
 
-cd ${OLDWD}
 
+# tools/bash/autogen-linux-gen.sh
