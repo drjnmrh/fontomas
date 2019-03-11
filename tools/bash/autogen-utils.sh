@@ -25,6 +25,17 @@ ag::err() {
 }
 
 
+ag::cmake_generate_config_flag() {
+    local _config=$1
+
+    case $_config in
+		Release|release) echo "-DCMAKE_BUILD_TYPE=Release";;
+		Debug|debug)     echo "-DCMAKE_BUILD_TYPE=Debug";;
+		*) 			     echo "";;
+	esac
+}
+
+
 ag::cmake_build_config_flag() {
     local _config=$1
 
@@ -42,6 +53,17 @@ ag::cmake_install_config_flag() {
     case $_config in
 		Release|release) echo "-DBUILD_TYPE=\"Release\"";;
 		Debug|debug)     echo "-DBUILD_TYPE=\"Debug\"";;
+		*) 			     echo "";;
+	esac
+}
+
+
+ag::cmake_test_config_flag() {
+    local _config=$1
+
+    case $_config in
+		Release|release) echo "-C Release";;
+		Debug|debug)     echo "-C Debug";;
 		*) 			     echo "";;
 	esac
 }

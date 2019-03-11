@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AutoGen Bash Xcode project generation script.
+# AutoGen Bash Linux project make script.
 # Copyright (C) 2019 O.Z.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -74,160 +74,154 @@ help() {
 # ----------------------------------------------------------------------------
 
 
-DEVELOP=0
-VERBOSE=0
 ROOT=${PWD}
 TOOLS=${PWD}/tools
 PREFIX=${PWD}/boutput
+VERBOSE=0
+DEVELOP=0
+BUILDNUMBER="1"
 CONFIG="all"
-MAJOR="0"
-MINOR="0"
-PATCH="1"
+DONTS=()
 
 
 #######################################################################
 # Parses arguments and sets global variables according values of these
 # arguments.
 # Globals:
-#   ROOT, TOOLS, DEVELOP, VERBOSE, PREFIX
+#   VERBOSE, ROOT, BUILDNUMBER, DONTS, TOOLS, PREFIX
 # Arguments:
-#   None
+#   arguments to the script to parse
 # Returns:
 #   None
 #######################################################################
 parse_args() {
-	local _defaultTools=1
-	local _defaultPrefix=1
+    local _dontsCounter=0
+    local _toolsDefault=1
+    local _defaultPrefix=1
 
-	while [[ "$#" > 0 ]]; do case $1 in
-	-d|--develop) DEVELOP=1;;
+    while [[ "$#" > 0 ]]; do case $1 in
 	-v|--verbose) VERBOSE=1;;
+    -d|--develop) DEVELOP=1;;
+    --dont) DONTS[$_dontsCounter]=$2; _dontsCounter=$(($_dontsCounter+1)); shift;;
 	-h|--help) help;;
 	-r|--root) ROOT=$2; shift;;
-	--tools) TOOLS=$2; _defaultTools=0; shift;;
-	--prefix) PREFIX=$2; _defaultPrefix=0; shift;;
-	--config) CONFIG=$2; shift;;
+    --config) CONFIG=$2; shift;;
+    --buildno) BUILDNUMBER=$2; shift;;
+    --tools) TOOLS=$2; _toolsDefault=0; shift;;
+    --prefix) PREFIX=$2; _defaultPrefix=0; shift;;
 	*) echo "Unknown parameter passed: $1" >&2; exit 1;;
 	esac; shift; done
+
+    if [[ "${ROOT}" == "." ]]; then
+        ROOT=${PWD}
+    fi
 
 	if [[ "${ROOT:~0}" == "/" ]]; then
 		ROOT="${ROOT:0:$((${#ROOT}-1))}"
 	fi
 
-    if [[ "${TOOLS:~0}" == "/" ]]; then
-		TOOLS="${TOOLS:0:$((${#TOOLS}-1))}"
-	fi
-
-	ROOT="$(cd "$(dirname "$ROOT")"; pwd)/$(basename "$ROOT")"
-
-	if [[ $DEVELOP -eq 1 ]]; then
-		echo "DEVELOP mode ON"
-	fi
+ 	ROOT="$(cd "$(dirname "$ROOT")"; pwd)/$(basename "$ROOT")"
 
 	if [[ $VERBOSE -eq 1 ]]; then
-		echo "VERBOSE mode ON"
+		echo "VERBOSE mode is ON"
 	fi
 
-	if [[ $_defaultTools -eq 1 ]]; then
+    if [[ $DEVELOP -eq 1 ]]; then
+		echo "DEVELOPMENT mode is ON"
+	fi
+
+    if [[ $_toolsDefault -eq 1 ]]; then
         TOOLS=${ROOT}/tools
     fi
 
-	if [[ $_defaultPrefix -eq 1 ]]; then
+    if [[ $_defaultPrefix -eq 1 ]]; then
 		PREFIX=${ROOT}/boutput
 	fi
 }
 
-
 #######################################################################
-# Main function of the script. Uses CMake to generate Xcode project.
+# The main function of the script. Executes the generation, building and
+# testing scripts for the Linux target platform.
 # Globals:
-#   PWD, CONFIG, VERBOSE, DEVELOP, ROOT, PREFIX, TOOLS, MAJOR, MINOR, PATCH
+#   PLATFORM, VERBOSE, DEVELOP, BUILDNUMBER
 # Arguments:
 #   arguments to the script to parse
 # Returns:
 #   None
 #######################################################################
 main() {
-    local _cmaketool=cmake
-    local _olddir=${PWD}
+    local _oldDir=${PWD}
 
-	parse_args $@
-	include_utils osx ${TOOLS}
+    parse_args $@
+    include_utils linux ${TOOLS}
 
-	local _cfg=${CONFIG}
+    local _config=${CONFIG}
 
-	cd ${ROOT}
-	if [[ $? -ne 0 ]]; then
-		ag::err "failed to CD to the root folder ${ROOT}!\n"
-		ag::fail "FAILED\n"
-		exit 1
-	fi
+    cd ${ROOT}
 
-	ag::parse_version
-	if [[ $? -ne 0 ]]; then
-		ag::err "failed to get version of the module"
-		ag::fail "FAILED\n"
-		cd $_olddir
-		exit 1
-	fi
-
-	local _builddir=$(ag::get_build_folder_name $_cfg)
-
-    if [[ -d "$_builddir" ]]; then
-		printf "  - cleaning by removing $_builddir : ";
-		rm -rf $_builddir
-		if [[ $? -ne 0 ]]; then
-			ag::err "failed to remove $_builddir"
-			ag::warn "FAILED\n"
-		else
-			ag::done "DONE\n"
-		fi
-	fi
-
-    printf "  - creating $_builddir folder: ";
-	mkdir $_builddir
-	if [[ $? -ne 0 ]]; then
-		cd $_olddir
-		ag::err "failed to create $_builddir"
-		ag::fail "FAILED\n"
-		exit 1
-	fi
-	cd $_builddir
-	if [[ $? -ne 0 ]]; then
-		cd $_olddir
-		ag::err "can't cd to $_builddir"
-		ag::fail "FAILED\n"
-		exit 1
-	fi
-	ag::done "DONE\n"
-
-	local _prefixdir=$(ag::get_prefix_path ${PREFIX} $_cfg)
-	local _buildtype=$(ag::cmake_generate_config_flag $_cfg)
-
-    $_cmaketool .. \
-            -DCMAKE_INSTALL_PREFIX=$_prefixdir \
-			$_buildtype \
-            -G "Xcode" \
-            -DVERMAJOR=${MAJOR} -DVERMINOR=${MINOR} -DVERPATCH=${PATCH} \
-			-DTOOLSDIR=${TOOLS} -DVERBOSE=${VERBOSE}
-
-    if [[ $? -ne 0 ]]; then
-        cd $_olddir
-        ag::err "failed to generate Xcode project"
-        ag::fail "FAILED\n"
-        exit 1
+    local _verbose=""
+    if [[ $VERBOSE -eq 1 ]]; then
+        _verbose="--verbose"
     fi
 
-    cd $_olddir
+    local _develop=""
+    if [[ $DEVELOP -eq 1 ]]; then
+        _develop="--develop"
+    fi
 
-	ag::done "SUCCESS\n"
+    local _needGenerate=1
+    local _needBuild=1
+    local _needTest=1
+    for dont in ${DONTS[@]}; do
+        if [[ "$dont" == "generate" ]]; then
+            _needGenerate=0
+        fi
+
+        if [[ "$dont" == "build" ]]; then
+            _needBuild=0
+        fi
+
+        if [[ "$dont" == "test" ]]; then
+            _needTest=0
+        fi
+    done
+
+    if [[ $_needGenerate -eq 1 ]]; then
+        ${TOOLS}/bash/autogen-linux-gen.sh $_config $_verbose --root ${ROOT} --tools ${TOOLS} --prefix ${PREFIX} $_develop
+        if [[ $? -ne 0 ]]; then
+            ag::fail "EPIC FAIL\n"
+            cd $_oldDir
+            exit 1
+        fi
+    fi
+
+    if [[ $_needBuild -eq 1 ]]; then
+        ${TOOLS}/bash/autogen-linux-build.sh $_config $_verbose --root ${ROOT} --tools ${TOOLS} $_develop
+        if [[ $? -ne 0 ]]; then
+            ag::fail "EPIC FAIL\n"
+            cd $_oldDir
+            exit 1
+        fi
+    fi
+
+    if [[ $_needTest -eq 1 ]]; then
+        ${TOOLS}/bash/autogen-linux-test.sh $_config $_verbose --root ${ROOT} --tools ${TOOLS} $_develop
+        if [[ $? -ne 0 ]]; then
+            ag::fail "EPIC FAIL\n"
+            cd $_oldDir
+            exit 1
+        fi
+    fi
+
+    cd $_oldDir
+    exit 0
 }
 
 
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 
 main $@
 
 
-# tools/bash/autogen-osx-gen.sh
+# tools/bash/autogen-linux-mk.sh

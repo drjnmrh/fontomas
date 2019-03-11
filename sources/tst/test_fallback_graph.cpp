@@ -3,6 +3,7 @@
 
 #include <list>
 #include <limits>
+#include <memory>
 
 #include "testers.h"
 #include "testsglobals.h"

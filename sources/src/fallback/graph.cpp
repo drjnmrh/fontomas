@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <memory>
 
 #include "fontomas/debug.h"
 #include "fontomas/macros.h"
@@ -22,13 +23,13 @@ namespace {
     template <typename T, typename SzT>
     inline SzT resize(T** pArr, SzT curSize, SzT newSize) noexcept {
         T* resized = new T[newSize];
-        
+
         std::memcpy(resized, *pArr, sizeof(T) * curSize);
         std::memset(resized, 0, sizeof(T) * (newSize - curSize));
-        
+
         std::swap(resized, *pArr);
         delete[] resized;
-        
+
         return newSize;
     }
 
@@ -48,7 +49,7 @@ Graph::Graph() noexcept
 Graph::~Graph() noexcept {
     if (!_nodes)
         return;
-    
+
     for (nodeid_t i = 0; i < _maxNodeId; ++i)
         release(_nodes[i]);
     delete[] _nodes;
@@ -58,9 +59,9 @@ Graph::~Graph() noexcept {
 Graph::Result Graph::addNode(nodeid_t nodeId, tagid_t tagId) noexcept {
     if (nodeId < _szNodes && nodeId <= _maxNodeId && exists(_nodes[nodeId]))
         return eExists;
-    
+
     allocNodes(nodeId);
-    
+
     NodeInfo& info = _nodes[nodeId];
     info.routes = new TagRoutes[sTagsReserved];
     std::memset(info.routes, 0, sTagsReserved * sizeof(TagRoutes));
@@ -78,7 +79,7 @@ Graph::Result Graph::addNode(nodeid_t nodeId, tagid_t tagId) noexcept {
 Graph::Result Graph::addRoute(nodeid_t nodeId, nodeid_t fallbackId, tagid_t tagId) noexcept {
     if (nodeId > _maxNodeId || !exists(_nodes[nodeId]))
         return eNotExists;
-    
+
     if (fallbackId > _maxNodeId || !exists(_nodes[fallbackId]))
         return eNotExists;
 
@@ -90,7 +91,7 @@ Graph::Result Graph::addRoute(nodeid_t nodeId, nodeid_t fallbackId, tagid_t tagI
 
     if (is_looped(nodeId, info, fallbackId, tagId))
         return eNotAllowed;
-    
+
     attach(info, tagId);
     attach(fallback, tagId);
 
@@ -105,7 +106,7 @@ uint16_t Graph::fallbacks(nodeid_t nodeId, tagid_t tagId,
 {
     if (nodeId > _maxNodeId || !exists(_nodes[nodeId]))
         return 0;
-    
+
     const NodeInfo& info = _nodes[nodeId];
 
     if (detached(info, tagId))
@@ -159,7 +160,7 @@ bool Graph::has_backedge(nodeid_t nodeId, tagid_t tagId,
         nodeid_t fallbackId = route.fallbacks[i];
         if (eGray == colors[fallbackId])
             return true;
-        
+
         if (fallbackId > _szNodes || !exists(_nodes[fallbackId])) {
             // Graph is inconsistent!
             fontomas__hardbreak;
@@ -227,17 +228,17 @@ bool Graph::detached(const NodeInfo &info, tagid_t tagId) noexcept {
 void Graph::attach(NodeInfo& info, tagid_t tagId) noexcept {
     if (attached(info, tagId))
         return;
-    
+
     if (tagId >= info.sztags) {
         info.sztags = resize<TagRoutes, uint16_t>(&info.routes, info.sztags, tagId + sTagsReserved);
     }
-    
+
     info.routes[tagId].fallbacks = new nodeid_t[sFallbacksReserved];
     info.routes[tagId].nbfallbacks = 0;
     info.routes[tagId].szfallbacks = sFallbacksReserved;
-    
+
     ++info.nbtags;
-    
+
     return;
 }
 
@@ -246,7 +247,7 @@ void Graph::attach(NodeInfo& info, tagid_t tagId) noexcept {
 void Graph::detach(NodeInfo& info, tagid_t tagId) noexcept {
     if (detached(info, tagId))
         return;
-    
+
     delete[] info.routes[tagId].fallbacks;
     info.routes[tagId].fallbacks = nullptr;
 }
@@ -258,7 +259,7 @@ void Graph::connect(NodeInfo& info, nodeid_t fallbackId, tagid_t tagId) noexcept
     if (route.szfallbacks <= route.nbfallbacks) {
         route.szfallbacks = resize<nodeid_t, uint16_t>(&route.fallbacks, route.szfallbacks, fallbackId + sFallbacksReserved);
     }
-    
+
     route.fallbacks[route.nbfallbacks++] = fallbackId;
 }
 
@@ -267,12 +268,12 @@ void Graph::connect(NodeInfo& info, nodeid_t fallbackId, tagid_t tagId) noexcept
 void Graph::release(Graph::NodeInfo& info) noexcept {
     if (!info.routes)
         return;
-    
+
     for (uint16_t i = 0; i < info.sztags; ++i) {
         if (info.routes[i].fallbacks)
             delete[] info.routes[i].fallbacks;
     }
-    
+
     delete[] info.routes;
 }
 
