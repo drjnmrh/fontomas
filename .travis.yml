@@ -1,9 +1,5 @@
 language: cpp
 
-os:
-  - osx
-  - linux
-
 matrix:
   include:
     - os: osx
@@ -22,4 +18,4 @@ branches:
 
 install: true
 script:
-  - 'if [ "$TRAVIS_BRANCH" == "develop" ]; then ./mk $PLATFORM --develop; else ./mk $PLATFORM; fi'
+  - ./.travis/runall.sh
