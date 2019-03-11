@@ -39,10 +39,7 @@ macro(AG_Platform_SetupTargetFlags target)
         $<$<COMPILE_LANGUAGE:C>:-std=c99>
     )
 
-    target_compile_options(${target} PUBLIC
-        $<$<CONFIG:Debug>:-rdynamic>
-    )
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -rdynamic")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -rdynamic -fsanitize=address")
 
     target_compile_options(${target} PUBLIC
         $<$<CONFIG:Release>:-Ofast $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti> >

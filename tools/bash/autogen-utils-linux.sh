@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AutoGen Bash Linux utils script.
-# Copyright (C) 2019  O.Z.
+# Copyright (C) 2019 O.Z.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

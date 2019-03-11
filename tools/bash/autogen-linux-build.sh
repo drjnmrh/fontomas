@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AutoGen Bash Linux build script.
-# Copyright (C) 2019  O.Z.
+# Copyright (C) 2019 O.Z.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -165,16 +165,6 @@ main() {
 
     local _module=${PWD##*/}
 
-    local _builddir=$(ag::get_build_folder_name ${CONFIG})
-
-    cd $_builddir
-	if [[ $? -ne 0 ]]; then
-		cd $_olddir
-		ag::err "can't cd to $_builddir (generate project first)"
-		ag::fail "FAILED\n"
-		exit 1
-	fi
-
     local _configsToBuild=(release debug)
 
     case ${CONFIG} in
@@ -190,12 +180,22 @@ main() {
     esac
 
     for _cfg in ${_configsToBuild[@]}; do
+        local _builddir=$(ag::get_build_folder_name $_cfg)
+
+        cd $_builddir
+        if [[ $? -ne 0 ]]; then
+            cd $_olddir
+            ag::err "can't cd to $_builddir (generate project first)"
+            ag::fail "FAILED\n"
+            exit 1
+        fi
+
         ag::info "** building '$_module' ($_cfg) **\n";
 
         local _buildCfgFlag=$(ag::cmake_build_config_flag $_cfg)
         local _installCfgFlag=$(ag::cmake_install_config_flag $_cfg)
 
-        $_cmaketool --build . $_buildCfgFlag -- -jobs $JOBS
+        $_cmaketool --build . $_buildCfgFlag -- -j $JOBS
         if [[ $? -ne 0 ]]; then
             cd $_olddir
             ag::err "failed to build $_module ($_cfg)"
@@ -214,9 +214,11 @@ main() {
             ag::fail "FAILED\n"
             exit 1
         fi
-    done
 
-    ag::done "DONE\n"
+        ag::done "DONE\n"
+
+        cd ..
+    done
 
     cd $_olddir
     exit 0

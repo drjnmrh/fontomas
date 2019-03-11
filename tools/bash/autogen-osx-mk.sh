@@ -1,65 +1,87 @@
 #!/bin/bash
 
-ROOT=${PWD}
-VERBOSE=0
-DEVELOP=0
-BUILDNUMBER="1"
-DONTS=()
+# AutoGen Bash Xcode project make script.
+# Copyright (C) 2019 O.Z.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# ----------------------- AutoGen Scripts Commons -----------------------------
+
+
+MYDIR="$(cd "$(dirname "$0")" && pwd)"
+MYNAME=`basename "$0"`
 
 ################################################################
-# Checks bash utils and includes sources.
+# Checks AutoGen CMake & Bash utils and includes sources.
+# Exits script in case of failure.
 # Globals:
-#   PWD, ROOT
+#   MYDIR, PWD
 # Arguments:
-#   platform
+#   platform, tools path
 # Returns:
-#   0 if succeeded, 1 otherwise
+#   None
 ################################################################
 include_utils() {
-	local _platform=$1
-    local _utils=${ROOT}/tools/bash
+    local _platform=$1
+    local _utils=$2/bash
 
 	if [[ ! -d "$_utils" ]]; then
-		printf "FAILED: no utils in $_utils!\n"
-		return 1
+		printf "WARNING: no utils in $_utils - trying the default path\n"
+		_utils="${MYDIR}"
 	fi
 
-	source $_utils/autogen-utils-$_platform.sh
-	source $_utils/autogen-utils.sh
+	if [[ -d "$_utils" ]]; then
+		printf "found utils in $_utils\n"
+	else
+		echo "no utils in $_utils" >&2
+		printf "FAILED\n"
+		exit 1
+	fi
 
-	return 0
+	source $_utils/autogen-utils.sh
+    source $_utils/autogen-utils-$_platform.sh
 }
 
 ###############################################################
-# Displays help information for the script
+# Displays help information for the script end exits.
 # Globals:
-#   None
+#   MYDIR, MYNAME
 # Arguments:
 #   None
 # Returns:
 #   None
 ###############################################################
 help() {
-	echo "Usage"
-	echo ""
-	echo "  ./autogen-osx-mk.sh [options]"
-	echo ""
-	echo ""
-	echo "Options:"
-	echo "  -v, --verbose                   = enable verbose mode"
-    echo "  --develop                       = enable development mode"
-    echo "  --dont <name of the phasse>     = exclude phase from the process (generate, build, test)"
-	echo "  -r, --root <path/to/root>       = specify a path to the folder, which contains sources parent"
-	echo "  -h, --help                      = show this help"
-    echo "  --buildno <build number>        = specify a build number"
-	echo ""
-	echo "Examples:"
-	echo ""
-	echo "  ./autogen-osx-mk.sh --buildno 256"
-	echo ""
+    echo ""
+	cat ${MYDIR}/../docs/${MYNAME}.txt
+    echo ""
 
 	exit 0
 }
+
+
+# ----------------------------------------------------------------------------
+
+ROOT=${PWD}
+TOOLS=${PWD}/tools
+PREFIX=${PWD}/boutput
+CONFIG="all"
+VERBOSE=0
+DEVELOP=0
+BUILDNUMBER="1"
+DONTS=()
+
 
 #######################################################################
 # Parses arguments and sets global variables according values of these
@@ -72,15 +94,20 @@ help() {
 #   None
 #######################################################################
 parse_args() {
+    local _defaultTools=1
+    local _defaultPrefix=1
     local _dontsCounter=0
 
     while [[ "$#" > 0 ]]; do case $1 in
-	-v|--verbose) VERBOSE=1;;
-    --develop) DEVELOP=1;;
-    --dont) DONTS[$_dontsCounter]=$2; _dontsCounter=$(($_dontsCounter+1)); shift;;
 	-h|--help) help;;
-	-r|--root) ROOT=$2; shift;;
-    --buildno) BUILDNUMBER=$2; shift;;
+    -v|--verbose) VERBOSE=1;;
+    -d|--develop) DEVELOP=1;;
+    -r|--root) ROOT=$2; shift;;
+    --tools) TOOLS=$2; _defaultTools=0; shift;;
+    --prefix) PREFIX=$2; _defaultPrefix=0; shift;;
+    --config) CONFIG=$2; shift;;
+    --dont) DONTS[$_dontsCounter]=$2; _dontsCounter=$(($_dontsCounter+1)); shift;;
+	--buildno) BUILDNUMBER=$2; shift;;
 	*) echo "Unknown parameter passed: $1" >&2; exit 1;;
 	esac; shift; done
 
@@ -101,6 +128,14 @@ parse_args() {
     if [[ $DEVELOP -eq 1 ]]; then
 		echo "DEVELOPMENT mode is ON"
 	fi
+
+    if [[ $_defaultTools -eq 1 ]]; then
+        TOOLS=${ROOT}/tools
+    fi
+
+    if [[ $_defaultPrefix -eq 1 ]]; then
+        PREFIX=${ROOT}/boutput
+    fi
 }
 
 #######################################################################
@@ -114,11 +149,17 @@ parse_args() {
 #   None
 #######################################################################
 main() {
-    parse_args $@
-    include_utils osx
-
     local _oldDir=${PWD}
+
+    parse_args $@
+    include_utils osx ${TOOLS}
+
     cd ${ROOT}
+    if [[ $? -ne 0 ]]; then
+		ag::err "failed to CD to the root folder ${ROOT}!\n"
+		ag::fail "FAILED\n"
+		exit 1
+	fi
 
     local _verbose=""
     if [[ $VERBOSE -eq 1 ]]; then
@@ -148,7 +189,7 @@ main() {
     done
 
     if [[ $_needGenerate -eq 1 ]]; then
-        ./tools/bash/autogen-osx-gen.sh $_verbose --root ${ROOT} $_develop
+        ${TOOLS}/bash/autogen-osx-gen.sh --config ${CONFIG} $_verbose --root ${ROOT} $_develop --tools ${TOOLS} --prefix ${PREFIX}
         if [[ $? -ne 0 ]]; then
             ag::fail "EPIC FAIL\n"
             cd $_oldDir
@@ -157,7 +198,7 @@ main() {
     fi
 
     if [[ $_needBuild -eq 1 ]]; then
-        ./tools/bash/autogen-osx-build.sh $_verbose --root ${ROOT} $_develop
+        ${TOOLS}/bash/autogen-osx-build.sh --config ${CONFIG} $_verbose --root ${ROOT} $_develop --tools ${TOOLS}
         if [[ $? -ne 0 ]]; then
             ag::fail "EPIC FAIL\n"
             cd $_oldDir
@@ -166,7 +207,7 @@ main() {
     fi
 
     if [[ $_needTest -eq 1 ]]; then
-        ./tools/bash/autogen-osx-test.sh $_verbose --root ${ROOT} $_develop
+        ${TOOLS}/bash/autogen-osx-test.sh --config ${CONFIG} $_verbose --root ${ROOT} $_develop --tools ${TOOLS}
         if [[ $? -ne 0 ]]; then
             ag::fail "EPIC FAIL\n"
             cd $_oldDir

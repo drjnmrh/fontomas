@@ -1,6 +1,9 @@
 #!/bin/bash
 
 MYDIR="$(cd "$(dirname "$0")" && pwd)"
+TOOLS=${MYDIR}/tools
+ROOT=${MYDIR}
+CONFIG="all"
 PLATFORM="osx"
 VERBOSE=0
 DEVELOP=0
@@ -21,7 +24,7 @@ help() {
 	echo ""
 	echo "  ./mk <platform> [options]"
 	echo ""
-    echo "Specify the target platform (osx, android, ios)."
+    echo "Specify the target platform (osx, linux, android, ios)."
 	echo ""
 	echo "Options:"
 	echo "  -v, --verbose                   = enable verbose mode"
@@ -29,6 +32,8 @@ help() {
 	echo "  -h, --help                      = show this help"
     echo "  --buildno <build number>        = specify a build number"
     echo "  --dont <phase name>             = exclude phase (generate, build, test)"
+	echo "  --tools <path/to/tools>         = specify a path to the AutoGen tools folder"
+	echo "  --config <configuration>        = specify a build configuration ('release', 'debug', 'all' - default)"
 	echo ""
 	echo "Examples:"
 	echo ""
@@ -49,6 +54,8 @@ help() {
 #   None
 #######################################################################
 parse_args() {
+	local _defaultTools=1
+
 	if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
 		help
 	fi
@@ -67,6 +74,8 @@ parse_args() {
     --dont) DONTS="$DONTS --dont $2"; shift;;
 	-h|--help) help;;
     --buildno) BUILDNUMBER=$2; shift;;
+	--tools) TOOLS=$2; _defaultTools=0; shift;;
+	--config) CONFIG=$2; shift;;
 	*) echo "Unknown parameter passed: $1" >&2; exit 1;;
 	esac; shift; done
 
@@ -77,6 +86,10 @@ parse_args() {
     if [[ $DEVELOP -eq 1 ]]; then
 		echo "DEVELOPMENT mode is ON"
 	fi
+
+	if [[ $_defaultTools -eq 1 ]]; then
+        TOOLS=${ROOT}/tools
+    fi
 }
 
 
@@ -107,7 +120,7 @@ main() {
 		_developflag="--develop"
 	fi
 
-	./tools/bash/autogen-${PLATFORM}-mk.sh --root ${MYDIR} --buildno ${BUILDNUMBER} $_verboseflag $_developflag ${DONTS}
+	${TOOLS}/bash/autogen-${PLATFORM}-mk.sh --config ${CONFIG} --tools ${TOOLS} --root ${MYDIR} --buildno ${BUILDNUMBER} $_verboseflag $_developflag ${DONTS}
 
     cd $_oldDir
     exit 0

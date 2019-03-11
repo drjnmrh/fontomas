@@ -5,7 +5,7 @@ in a specific subfolder.
 
 Usage:
 
-  autogen-linux-build.sh config [options]
+  autogen-osx-build.sh [options]
 
 Specify which config (debug, release, all) should be generated.
 
@@ -16,7 +16,8 @@ Options:
   -r, --root <path/to/root>       = specify a path to the folder, which contains modules
   --tools <path/to/tools>         = specify a path to the AutoGen tools folder
   -j, --jobs <number of jobs>     = specify a number of jobs used for the build
+  --config <build configuration>  = specify a build configuration ('release', 'debug', 'all' - default)
 
 Examples:
 
-  ./autogen-linux-build.sh debug --develop --root ../..
+  ./autogen-osx-build.sh --config release --develop --root ../.. -j 4

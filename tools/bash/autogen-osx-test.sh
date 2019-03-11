@@ -1,66 +1,92 @@
 #!/bin/bash
 
-DEVELOP=0
-VERBOSE=0
-ROOT=${PWD}
-TOOLS=${PWD}/tools
-PREFIX=${PWD}/boutput
-CONFIG="debug"
-DIR_SUFFIX=osx
-MAJOR="0"
-MINOR="0"
-PATCH="1"
+# AutoGen Bash Xcode project tests running script.
+# Copyright (C) 2019 O.Z.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# ----------------------- AutoGen Scripts Commons -----------------------------
+
+
+MYDIR="$(cd "$(dirname "$0")" && pwd)"
+MYNAME=`basename "$0"`
+
+################################################################
+# Checks AutoGen CMake & Bash utils and includes sources.
+# Exits script in case of failure.
+# Globals:
+#   MYDIR, PWD
+# Arguments:
+#   platform, tools path
+# Returns:
+#   None
+################################################################
+include_utils() {
+    local _platform=$1
+    local _utils=$2/bash
+
+	if [[ ! -d "$_utils" ]]; then
+		printf "WARNING: no utils in $_utils - trying the default path\n"
+		_utils="${MYDIR}"
+	fi
+
+	if [[ -d "$_utils" ]]; then
+		printf "found utils in $_utils\n"
+	else
+		echo "no utils in $_utils" >&2
+		printf "FAILED\n"
+		exit 1
+	fi
+
+	source $_utils/autogen-utils.sh
+    source $_utils/autogen-utils-$_platform.sh
+}
 
 ###############################################################
-# Displays help information for the script
+# Displays help information for the script end exits.
 # Globals:
-#   None
+#   MYDIR, MYNAME
 # Arguments:
 #   None
 # Returns:
 #   None
 ###############################################################
 help() {
-	echo "Usage"
-	echo ""
-	echo "  mk <module> <phase> <platform> [options]"
-	echo ""
-	echo "Specify which module, which phase of the make process"
-	echo "should be executed and for which platform the module"
-	echo "should be built."
-	echo "Phases : depends, build, test, deploy."
-	echo "Platforms : android, ios"
-	echo ""
-	echo "Options:"
-	echo "  -d, --develop                   = all modules are installed in the parent folder"
-	echo "  -v, --verbose                   = enable verbose mode"
-	echo "  -h, --help                      = show this help"
-	echo "  -r, --root <path/to/root>       = specify a path to the folder, which contains modules"
-	echo "  -s, --serial <device_serial>    = specify a serial number of the device to run tests on (default is emulator)"
-	echo "  --strip                         = strip built result artifact"
-	echo "  -j, --jobs <number of jobs>     = specify a number of jobs used for the build"
-	echo "  --only-debug                    = build only Debug configuration"
-	echo "  --only-build					= don't generate project, only run make"
-	echo "  --only-generate				    = don't build project, just generate project"
-	echo ""
-	echo "Examples:"
-	echo ""
-	echo "  ./mk testing test android --develop --root .. --serial ce12171ca36a2e1601"
-	echo "  ./mk commons build android --develop --root .."
-	echo "  make_scripts/mk commons build android"
-	echo ""
+    echo ""
+	cat ${MYDIR}/../docs/${MYNAME}.txt
+    echo ""
 
 	exit 0
 }
+
+
+# ----------------------------------------------------------------------------
+
+DEVELOP=0
+VERBOSE=0
+ROOT=${PWD}
+TOOLS=${PWD}/tools
+CONFIG="all"
 
 
 #######################################################################
 # Parses arguments and sets global variables according values of these
 # arguments.
 # Globals:
-#   MODULE, PHASE, PLATFORM, DEVELOP, VERBOSE, PREFIX, SERIAL
+#   ROOT, CONFIG, PLATFORM, DEVELOP, VERBOSE, TOOLS
 # Arguments:
-#   phase, platform, options
+#   None
 # Returns:
 #   None
 #######################################################################
@@ -95,51 +121,28 @@ parse_args() {
 		echo "VERBOSE mode is ON"
 	fi
 
-	PREFIX=${ROOT}/boutput
-
 	if [[ $_defaultTools -eq 1 ]]; then
 		TOOLS=${ROOT}/tools
 	fi
 }
 
 
-################################################################
-# Checks Ug CMake & Bash utils and includes sources.
-# Sets UTILS global variable.
+#######################################################################
+# Main function of the script. Uses CTest tool to test already built
+# artifacts.
 # Globals:
-#   PREFIX, DEVELOP, PWD, MODULE
+#   PWD, CONFIG, VERBOSE, DEVELOP, ROOT, TOOLS
 # Arguments:
-#   None
+#   arguments to the script to parse
 # Returns:
-#   0 if succeeded, 1 otherwise
-################################################################
-include_utils() {
-	local utils=${TOOLS}/bash
-
-	if [[ ! -d "$utils" ]]; then
-		printf "WARNING: no utils in $utils - trying the default path\n"
-		utils="${PWD}/../tools/bash"
-	fi
-
-	if [[ -d "$utils" ]]; then
-		printf "found utils in $utils\n"
-	else
-		echo "no utils in $utils" >&2
-		printf "FAILED\n"
-		return 1
-	fi
-
-	source $utils/autogen-utils.sh
-
-	UTILS=$utils
-	return 0
-}
-
-
+#   None
+#######################################################################
 main() {
-    local _cmaketool=cmake
-    local _builddir=build.${DIR_SUFFIX}
     local _olddir=${PWD}
+
+	parse_args $@
+	include_utils osx ${TOOLS}
+
     local _module=${ROOT##*/}
 
     cd ${ROOT}
@@ -149,6 +152,24 @@ main() {
         exit 1
     fi
 
+	local _configsToTest=(release debug)
+
+    case ${CONFIG} in
+        Release|release) _configsToTest=(release);;
+        Debug|debug)     _configsToTest=(debug);;
+        All|all)         _configsToTest=(release debug);;
+        *)
+			cd $_olddir
+			ag::err "unknown config ${CONFIG}"
+			ag::fail "FAILED\n"
+			exit 1
+			;;
+    esac
+
+	# Xcode allows multi-config projects, thus there's one build folder for all
+	# configurations
+	local _builddir=$(ag::get_build_folder_name ${CONFIG})
+
     cd $_builddir
 	if [[ $? -ne 0 ]]; then
 		cd $_olddir
@@ -157,36 +178,19 @@ main() {
 		exit 1
 	fi
 
-    case $CONFIG in
-		Release|release)
-			ag::info "** run tests for '$_module' ($DIR_SUFFIX/release) **\n";
+	for _cfg in ${_configsToTest[@]}; do
+		ag::info "** run tests for '$_module' ($_cfg) **\n";
 
-			ctest -C Release --verbose
-            if [[ $? -ne 0 ]]; then
-                cd $_olddir
-                ag::err "tests failed"
-                ag::fail "FAILED\n"
-                exit 1
-            fi
-			;;
-		Debug|debug)
-			ag::info "** run tests for '$_module' ($DIR_SUFFIX/debug) **\n";
+		local _configFlag=$(ag::cmake_test_config_flag $_cfg)
 
-			ctest -C Debug --verbose
-            if [[ $? -ne 0 ]]; then
-                cd $_olddir
-                ag::err "tests failed"
-                ag::fail "FAILED\n"
-                exit 1
-            fi
-			;;
-		*)
+		ctest $_configFlag --verbose
+		if [[ $? -ne 0 ]]; then
 			cd $_olddir
-			ag::err "unknown config $_config"
+			ag::err "tests failed"
 			ag::fail "FAILED\n"
 			exit 1
-			;;
-	esac
+		fi
+	done
 
     ag::done "DONE\n"
 
@@ -195,7 +199,10 @@ main() {
 }
 
 
-parse_args $@
-include_utils
+# ----------------------------------------------------------------------------
 
-main
+
+main $@
+
+
+# tools/bash/autogen-osx-test.sh
