@@ -121,6 +121,10 @@ main() {
 	fi
 
 	${TOOLS}/bash/autogen-${PLATFORM}-mk.sh --config ${CONFIG} --tools ${TOOLS} --root ${MYDIR} --buildno ${BUILDNUMBER} $_verboseflag $_developflag ${DONTS}
+	if [[ $? -ne 0 ]]; then
+		cd $_oldDir
+		exit 1
+	fi
 
     cd $_oldDir
     exit 0
