@@ -50,7 +50,7 @@ Graph::~Graph() noexcept {
     if (!_nodes)
         return;
 
-    for (nodeid_t i = 0; i < _maxNodeId; ++i)
+    for (nodeid_t i = 0; i <= _maxNodeId; ++i)
         release(_nodes[i]);
     delete[] _nodes;
 }
