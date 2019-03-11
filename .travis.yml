@@ -6,7 +6,7 @@ matrix:
       osx_image: xcode10.1
       env: PLATFORM=osx
     - os: linux
-      env: PLATFORM=linux
+      env: PLATFORM=linux COMPILER=g++-7
       dist: xenial
       addons:
         apt:
