@@ -19,12 +19,12 @@ endmacro()
 
 
 macro(AG_Platform_GetName outvar)
-    set(${outvar} "OSX")
+    set(${outvar} "Linux")
 endmacro()
 
 
 macro(AG_Platform_GetShortName outvar)
-    set(${outvar} "macos")
+    set(${outvar} "linux")
 endmacro()
 
 
@@ -34,6 +34,8 @@ endmacro()
 
 
 macro(AG_Platform_SetupTargetFlags target)
+    set(CMAKE_CXX_STANDARD 17)
+
     target_compile_options(${target} PUBLIC
         $<$<COMPILE_LANGUAGE:CXX>:-std=c++1z>
         $<$<COMPILE_LANGUAGE:C>:-std=c99>
@@ -49,14 +51,14 @@ macro(AG_Platform_SetupTargetFlags target)
         OPENGL_HEADER=<GL/glew.h>
     )
 
-    target_compile_definitions(${target} PRIVATE PLATFORM_MACOS)
+    target_compile_definitions(${target} PRIVATE PLATFORM_LINUX)
 endmacro()
 
 
 macro(AG_Platform_AddExecutableTarget target itemsvar)
     add_executable(${target} ${${itemsvar}})
     set_target_properties(${target} PROPERTIES
-        XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS	"@executable_path"
+        INSTALL_RPATH "$ORIGIN/../lib:$ORIGIN"
     )
     target_link_libraries(${target} pthread)
 endmacro()
@@ -98,7 +100,7 @@ endmacro()
 
 macro(AG_Platform_LinkUiLibraries target)
     # as UI framework, the GLFW3 is used; in order to use this
-    # library, GLFW3 must be install (this can be done using homebrew)
+    # library, GLFW3 must be installed (this can be done using a packet manager)
 
     find_package(PkgConfig REQUIRED)
 
@@ -123,4 +125,4 @@ macro(AG_Platform_LinkUiLibraries target)
 endmacro()
 
 
-# platform/AutoGenOsx.cmake
+# platform/AutoGenLinux.cmake

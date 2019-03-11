@@ -1,0 +1,18 @@
+Usage:
+
+  ./autogen-osx-mk.sh [options]
+
+Options:
+  -h, --help                      = show this help
+  -v, --verbose                   = enable verbose mode
+  -d, --develop                   = enable development mode
+  -r, --root <path/to/root>       = specify a path to the folder, which contains sources parent
+  --config <configuration>        = specify a build configuration ('release', 'debug', 'all' - default)
+  --tools <path/to/tools>         = specify a path to the AutoGen tools folder
+  --prefix <path/to/install>      = specify a custom installation path for the built module
+  --dont <name of the phasse>     = exclude phase from the process (generate, build, test)
+  --buildno <build number>        = specify a build number
+
+Examples:
+
+  ./autogen-osx-mk.sh --buildno 256 --dont test --root ../..

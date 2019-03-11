@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AutoGen Bash Linux Makefiles generation script.
+# AutoGen Bash Linux tests running script.
 # Copyright (C) 2019 O.Z.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -78,18 +78,14 @@ DEVELOP=0
 VERBOSE=0
 ROOT=${PWD}
 TOOLS=${PWD}/tools
-PREFIX=${PWD}/boutput
 CONFIG="release"
-MAJOR="0"
-MINOR="0"
-PATCH="1"
 
 
 #######################################################################
 # Parses arguments and sets global variables according values of these
 # arguments.
 # Globals:
-#   CONFIG, DEVELOP, VERBOSE, ROOT, TOOLS, PREFIX
+#   CONFIG, DEVELOP, VERBOSE, ROOT, TOOLS
 # Arguments:
 #   config
 # Returns:
@@ -97,7 +93,6 @@ PATCH="1"
 #######################################################################
 parse_args() {
     local _defaultTools=1
-	local _defaultPrefix=1
 
     if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
 		help
@@ -117,7 +112,6 @@ parse_args() {
 	-h|--help) help;;
 	-r|--root) ROOT=$2; shift;;
 	--tools) TOOLS=$2; _defaultTools=0; shift;;
-	--prefix) PREFIX=$2; _defaultPrefix=0; shift;;
 	*) echo "Unknown parameter passed: $1" >&2; exit 1;;
 	esac; shift; done
 
@@ -142,25 +136,22 @@ parse_args() {
     if [[ $_defaultTools -eq 1 ]]; then
         TOOLS=${ROOT}/tools
     fi
-
-	if [[ $_defaultPrefix -eq 1 ]]; then
-		PREFIX=${ROOT}/boutput
-	fi
 }
 
 
 #######################################################################
-# Main function of the script. Uses CMake to generate UNIX Makefiles.
+# Main function of the script. Uses CTest tool to test already built
+# artifacts.
 # Globals:
-#   PWD, CONFIG, VERBOSE, DEVELOP, ROOT, PREFIX, TOOLS, MAJOR, MINOR, PATCH
+#   PWD, CONFIG, VERBOSE, DEVELOP, ROOT, TOOLS
 # Arguments:
 #   arguments to the script to parse
 # Returns:
 #   None
 #######################################################################
 main() {
-    local _cmaketool=cmake
     local _olddir=${PWD}
+    local _module=${ROOT##*/}
 
 	parse_args $@
 	include_utils linux ${TOOLS}
@@ -172,15 +163,7 @@ main() {
 		exit 1
 	fi
 
-	ag::parse_version
-	if [[ $? -ne 0 ]]; then
-		ag::err "failed to get version of the module"
-		ag::fail "FAILED\n"
-		cd $_olddir
-		exit 1
-	fi
-
-	local _configs=()
+    local _configs=()
 	case ${CONFIG} in
 		Release|release)	_configs=(release);;
 		Debug|debug)		_configs=(debug);;
@@ -193,61 +176,35 @@ main() {
 			;;
 	esac
 
-	for _cfg in ${_configs[@]}; do
-		local _builddir=$(ag::get_build_folder_name $_cfg)
+    for _cfg in ${_configs[@]}; do
+        local _builddir=$(ag::get_build_folder_name $_cfg)
 
-		if [[ -d "$_builddir" ]]; then
-			printf "  - cleaning by removing $_builddir : ";
-			rm -rf $_builddir
-			if [[ $? -ne 0 ]]; then
-				ag::warn "FAILED\n"
-			else
-				ag::done "DONE\n"
-			fi
-		fi
+        cd $_builddir
+        if [[ $? -ne 0 ]]; then
+            cd $_olddir
+            ag::err "can't cd to $_builddir (did you forget to generate and build the project?)\n"
+            ag::fail "FAILED\n"
+            exit 1
+        fi
 
-		printf "  - creating $_builddir folder: ";
-		mkdir $_builddir
-		if [[ $? -ne 0 ]]; then
-			cd $_olddir
-			ag::err "failed to create $_builddir"
-			ag::fail "FAILED\n"
-			exit 1
-		fi
+        ag::info "** run tests for '$_module' ($_cfg) **\n";
 
-		cd $_builddir
-		if [[ $? -ne 0 ]]; then
-			cd $_olddir
-			ag::err "can't cd to $_builddir"
-			ag::fail "FAILED\n"
-			exit 1
-		fi
-		ag::done "DONE\n"
+        local _configFlag=$(ag::cmake_test_config_flag $_cfg)
 
-		local _prefixdir=$(ag::get_prefix_path ${PREFIX} $_cfg)
-		local _buildtype=$(ag::cmake_generate_config_flag $_cfg)
+        ctest $_configFlag --verbose
+        if [[ $? -ne 0 ]]; then
+            cd $_olddir
+            ag::err "tests failed"
+            ag::fail "FAILED\n"
+            exit 1
+        fi
 
-		$_cmaketool .. \
-				-DCMAKE_INSTALL_PREFIX=$_prefixdir \
-				$_buildtype \
-				-G "Unix Makefiles" \
-				-DVERMAJOR=${MAJOR} -DVERMINOR=${MINOR} -DVERPATCH=${PATCH} \
-				-DTOOLSDIR=${TOOLS} -DVERBOSE=$VERBOSE
-
-		if [[ $? -ne 0 ]]; then
-			cd $_olddir
-			ag::err "failed to generate makefiles for $_cfg"
-			ag::fail "FAILED\n"
-			exit 1
-		fi
-
-		cd ..
-	done
+        cd ..
+    done
 
     cd $_olddir
-
 	ag::done "SUCCESS\n"
-	exit 0
+    exit 0
 }
 
 
@@ -257,4 +214,4 @@ main() {
 main $@
 
 
-# tools/bash/autogen-linux-gen.sh
+# tools/bash/autogen-linux-test.sh

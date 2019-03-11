@@ -1,12 +1,19 @@
 language: cpp
 
-os: osx
-
 matrix:
   include:
     - os: osx
       osx_image: xcode10.1
       env: PLATFORM=osx
+    - os: linux
+      env: PLATFORM=linux COMPILER=g++-7
+      dist: xenial
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
 
 branches:
   only:
@@ -16,4 +23,4 @@ branches:
 
 install: true
 script:
-  - 'if [ "$TRAVIS_BRANCH" == "develop" ]; then ./mk $PLATFORM --develop; else ./mk $PLATFORM; fi'
+  - ./.travis/runall.sh
