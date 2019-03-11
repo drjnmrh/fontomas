@@ -22,15 +22,27 @@ public:
     static nodeid_t maxNodeId(const Graph& g) noexcept {
         return g._maxNodeId;
     }
-
-    static const std::unordered_map<nodeid_t, Graph::NodeInfo>& nodesTable(const Graph& g) noexcept {
-        return g._nodesTable;
+    
+    static nodeid_t szNodes(const Graph& g) noexcept {
+        return g._szNodes;
+    }
+    
+    static nodeid_t nbNodes(const Graph& g) noexcept {
+        if (!g._nodes)
+            return 0;
+        nodeid_t counter = 0;
+        for (nodeid_t i = 0; i < g._szNodes; ++i) {
+            if (g._nodes[i].routes)
+                counter += 1;
+        }
+        return counter;
     }
 
     static bool initWithNodes(Graph& g, std::initializer_list<std::pair<nodeid_t, tagid_t>> nodes) noexcept {
-        if (g._nodesTable.size() > 0) {
+        if (g._szNodes > 0) {
             g.~Graph();
-            g._nodesTable.clear();
+            g._szNodes = g._maxNodeId = 0;
+            g._nodes = nullptr;
         }
 
         for (const auto& p : nodes) {
@@ -42,11 +54,10 @@ public:
     }
 
     static bool hasRoute(const Graph& g, nodeid_t nodeId, nodeid_t fallbackId, tagid_t tagId) noexcept {
-        auto nodeIt = g._nodesTable.end();
-        fontomas__safe_call(nodeIt = g._nodesTable.find(nodeId));
-        if (g._nodesTable.end() == nodeIt)
+        if (nodeId > g._maxNodeId || !g._nodes[nodeId].routes)
             return false;
-        return Graph::has_route(nodeIt->second, fallbackId, tagId);
+        
+        return Graph::has_route(g._nodes[nodeId], fallbackId, tagId);
     }
 };
 

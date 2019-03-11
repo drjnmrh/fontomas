@@ -36,8 +36,11 @@ static fontomas::tagid_t sEtalonMatrix[7][7] = {
 #define graph_maxNodeId(GraphVar) \
     fontomas::fallback::Tester::maxNodeId((GraphVar))
 
-#define graph_nodesTable(GraphVar) \
-    fontomas::fallback::Tester::nodesTable((GraphVar))
+#define graph_szNodes(GraphVar) \
+    fontomas::fallback::Tester::szNodes((GraphVar))
+
+#define graph_nbNodes(GraphVar) \
+    fontomas::fallback::Tester::nbNodes((GraphVar))
 
 #define graph_init(GraphVar, ...) \
     fontomas::fallback::Tester::initWithNodes((GraphVar), { __VA_ARGS__ })
@@ -58,31 +61,35 @@ bool test__fallback__graph_addnode() {
     Graph::Result res = graph.addNode(11, 0);
     fontomas__check_equal(res, Graph::eOk);
     fontomas__check_equal(graph_maxNodeId(graph), 11);
-    fontomas__check_equal(graph_nodesTable(graph).size(), 1);
+    fontomas__check_true(graph_szNodes(graph) > graph_maxNodeId(graph));
 
     for (nodeid_t id = 0; id < 10; ++id) {
         res = graph.addNode(id, id % 3);
         fontomas__check_equal(res, Graph::eOk);
         fontomas__check_equal(graph_maxNodeId(graph), 11);
-        fontomas__check_equal(graph_nodesTable(graph).size(), id + 2);
+        fontomas__check_equal(graph_nbNodes(graph), id + 2);
+        fontomas__check_true(graph_szNodes(graph) > graph_maxNodeId(graph));
     }
 
     for (nodeid_t id = 12; id < 20; ++id) {
         res = graph.addNode(id, id % 6);
         fontomas__check_equal(res, Graph::eOk);
         fontomas__check_equal(graph_maxNodeId(graph), id);
-        fontomas__check_equal(graph_nodesTable(graph).size(), id);
+        fontomas__check_equal(graph_nbNodes(graph), id);
+        fontomas__check_true(graph_szNodes(graph) > graph_maxNodeId(graph));
     }
 
     res = graph.addNode(0, 4);
     fontomas__check_equal(res, Graph::eExists);
     fontomas__check_equal(graph_maxNodeId(graph), 19);
-    fontomas__check_equal(graph_nodesTable(graph).size(), 19);
+    fontomas__check_equal(graph_nbNodes(graph), 19);
+    fontomas__check_true(graph_szNodes(graph) > graph_maxNodeId(graph));
 
     res = graph.addNode(20, 10);
     fontomas__check_equal(res, Graph::eOk);
     fontomas__check_equal(graph_maxNodeId(graph), 20);
-    fontomas__check_equal(graph_nodesTable(graph).size(), 20);
+    fontomas__check_equal(graph_nbNodes(graph), 20);
+    fontomas__check_true(graph_szNodes(graph) > graph_maxNodeId(graph));
 
     return true;
 }
@@ -142,7 +149,7 @@ bool test__fallback__graph_addroute() {
                                 graph_node(6, 10));
         fontomas__check_equal(ok, true);
         fontomas__check_equal(graph_maxNodeId(g), 6);
-        fontomas__check_equal(graph_nodesTable(g).size(), 7);
+        fontomas__check_equal(graph_nbNodes(g), 7);
 
         for (std::size_t i = 0; i < routesOrder.size(); ++i) {
             const Route& route = sRoutes[routesOrder[i]];
@@ -220,7 +227,7 @@ bool test__fallback__graph_fallbacks() {
 
     fontomas__check_equal(ok, true);
     fontomas__check_equal(graph_maxNodeId(g), 6);
-    fontomas__check_equal(graph_nodesTable(g).size(), 7);
+    fontomas__check_equal(graph_nbNodes(g), 7);
 
     for (std::size_t i = 0; i < routesOrder.size(); ++i) {
         const Route& route = sRoutes[routesOrder[i]];
