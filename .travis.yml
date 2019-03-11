@@ -1,12 +1,18 @@
 language: cpp
 
-os: osx
+os:
+  - osx
+  - linux
 
 matrix:
   include:
     - os: osx
       osx_image: xcode10.1
       env: PLATFORM=osx
+    - os: linux
+      env: PLATFORM=linux
+      dist: xenial
+      compiler: gcc
 
 branches:
   only:

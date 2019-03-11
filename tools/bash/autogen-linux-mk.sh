@@ -150,12 +150,13 @@ parse_args() {
 #   None
 #######################################################################
 main() {
-    local _config=${CONFIG}
+    local _oldDir=${PWD}
 
     parse_args $@
     include_utils linux ${TOOLS}
 
-    local _oldDir=${PWD}
+    local _config=${CONFIG}
+
     cd ${ROOT}
 
     local _verbose=""

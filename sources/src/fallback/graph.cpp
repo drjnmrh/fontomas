@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <memory>
 
 #include "fontomas/debug.h"
 #include "fontomas/macros.h"
@@ -214,7 +215,7 @@ void Graph::release(Graph::NodeInfo& info) noexcept {
     if (!info.routes)
         return;
 
-    for (uint16_t i = 0; i < info.nbtags; ++i) {
+    for (uint16_t i = 0; i < info.sztags; ++i) {
         if (info.routes[i].fallbacks)
             delete[] info.routes[i].fallbacks;
     }

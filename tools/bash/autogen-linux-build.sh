@@ -195,7 +195,12 @@ main() {
         local _buildCfgFlag=$(ag::cmake_build_config_flag $_cfg)
         local _installCfgFlag=$(ag::cmake_install_config_flag $_cfg)
 
-        $_cmaketool --build . $_buildCfgFlag -- -j $JOBS
+        local _verboseFlag=""
+        if [[ ${VERBOSE} -eq 1 ]]; then
+            _verboseFlag="VERBOSE=1"
+        fi
+
+        $_cmaketool --build . $_buildCfgFlag -- -j $JOBS $_verboseFlag
         if [[ $? -ne 0 ]]; then
             cd $_olddir
             ag::err "failed to build $_module ($_cfg)"
